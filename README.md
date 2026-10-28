@@ -41,8 +41,11 @@ make test-exports     # opt-in: exportaciones reales, mucho más lento
 `VERSION_CODE` es un entero positivo compatible con Android. El constructor usa un
 proyecto temporal y **rechaza sobrescribir instaladores existentes**; elegí un
 directorio o versión nuevos. Las herramientas no se instalan en el sistema local.
-La preparación reproducible de CI está en `.github/actions/setup-godot/action.yml`:
-descargas oficiales con SHA256 fijado, sin caché enorme.
+La preparación reproducible de CI está en `.github/actions/setup-godot/action.yml`
+(motor y plantillas) y en el paso «Dependencias de exportación» de
+`.github/workflows/delivery.yml` (Android command-line tools 19.0): descargas
+oficiales con SHA256 fijado, SDK aislado en `$RUNNER_TEMP/sdk`, sin depender de
+Android preinstalado ni usar una caché enorme.
 
 ## Instalación de la preview
 

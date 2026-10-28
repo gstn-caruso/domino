@@ -50,13 +50,24 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y desktop-file-utils
+          sdk="$RUNNER_TEMP/sdk"
+          archive="$RUNNER_TEMP/commandlinetools.zip"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+          echo "7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee  $archive" | sha256sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP/android-tools"
+          mkdir -p "$sdk/cmdline-tools"
+          mv "$RUNNER_TEMP/android-tools/cmdline-tools" "$sdk/cmdline-tools/19.0"
+          sdkmanager="$sdk/cmdline-tools/19.0/bin/sdkmanager"
           # yes termina con SIGPIPE al cerrar sdkmanager: comprobar el consumidor.
           set +o pipefail
-          yes | sdkmanager --licenses > /dev/null
+          yes | "$sdkmanager" --sdk_root="$sdk" --licenses > /dev/null
           status=${PIPESTATUS[1]}
           set -o pipefail
           test "$status" -eq 0
-          sdkmanager 'platform-tools' 'build-tools;35.0.1' 'platforms;android-35'
+          "$sdkmanager" --sdk_root="$sdk" 'platform-tools' 'build-tools;35.0.1' 'platforms;android-35'
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk" >> "$GITHUB_ENV"
       - name: Resolver versión automática
         id: plan
         env:
