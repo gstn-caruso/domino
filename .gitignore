@@ -1,0 +1,29 @@
+# Godot: conservar *.uid y metadatos *.import; regenerar caché/traducciones.
+.godot/
+*.translation
+
+# Entorno y salidas locales.
+.pi/
+/build/
+/builds/
+/dist/
+/tools/
+.local/
+__pycache__/
+*.py[cod]
+.venv/
+
+# Nunca versionar secretos ni identidades de firma.
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+export_credentials.cfg
+.idea/
+.vscode/
+.DS_Store

@@ -1,0 +1,161 @@
+name: Entrega Android y Linux
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Las PR y la construcción no pueden publicar. No se cancelan merges pendientes.
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-godot
+      - name: Dependencias de pruebas
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y desktop-file-utils
+      - name: Pruebas de interfaz y Python
+        run: make test
+
+  build:
+    needs: tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    outputs:
+      installer-artifact: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup-godot
+        with:
+          templates: 'true'
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Dependencias de exportación
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y desktop-file-utils
+          sdk="$RUNNER_TEMP/sdk"
+          archive="$RUNNER_TEMP/commandlinetools.zip"
+          curl --fail --location --retry 3 --output "$archive" \
+            https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+          echo "7ec965280a073311c339e571cd5de778b9975026cfcbe79f2b1cdcb1e15317ee  $archive" | sha256sum --check --strict
+          unzip -q "$archive" -d "$RUNNER_TEMP/android-tools"
+          mkdir -p "$sdk/cmdline-tools"
+          mv "$RUNNER_TEMP/android-tools/cmdline-tools" "$sdk/cmdline-tools/19.0"
+          sdkmanager="$sdk/cmdline-tools/19.0/bin/sdkmanager"
+          # yes termina con SIGPIPE al cerrar sdkmanager: comprobar el consumidor.
+          set +o pipefail
+          yes | "$sdkmanager" --sdk_root="$sdk" --licenses > /dev/null
+          status=${PIPESTATUS[1]}
+          set -o pipefail
+          test "$status" -eq 0
+          "$sdkmanager" --sdk_root="$sdk" 'platform-tools' 'build-tools;35.0.1' 'platforms;android-35'
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$sdk" >> "$GITHUB_ENV"
+      - name: Resolver versión automática
+        id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 scripts/release_plan.py --event "$EVENT" --ref "$REF" --run-number "$RUN_NUMBER" > "$RUNNER_TEMP/plan.json"
+          echo "version=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$RUNNER_TEMP/plan.json")" >> "$GITHUB_OUTPUT"
+      - name: Construir ambos instaladores
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: make build BUILD_DIR=builds
+      - name: Validar los instaladores que se subirán
+        shell: bash
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          apk="$GITHUB_WORKSPACE/builds/domino-$VERSION.apk"
+          deb="$GITHUB_WORKSPACE/builds/domino_${VERSION}_amd64.deb"
+          tools="$ANDROID_HOME/build-tools/35.0.1"
+          test -s "$apk"
+          test -s "$deb"
+          "$tools/apksigner" verify --verbose --print-certs "$apk" | tee "$RUNNER_TEMP/signature.txt"
+          grep -F 'CN=Android Debug' "$RUNNER_TEMP/signature.txt"
+          "$tools/aapt" dump badging "$apk" | tee "$RUNNER_TEMP/badging.txt"
+          grep -F "package: name='io.github.gstncaruso.domino.preview' versionCode='$VERSION_CODE' versionName='$VERSION'" "$RUNNER_TEMP/badging.txt"
+          "$tools/aapt" dump permissions "$apk" > "$RUNNER_TEMP/permissions.txt"
+          if grep -Fq 'android.permission.INTERNET' "$RUNNER_TEMP/permissions.txt"; then
+            echo 'Permiso INTERNET inesperado' >&2
+            exit 1
+          fi
+          test "$(dpkg-deb --field "$deb" Package)" = domino
+          test "$(dpkg-deb --field "$deb" Version)" = "$VERSION"
+          test "$(dpkg-deb --field "$deb" Architecture)" = amd64
+          extracted="$RUNNER_TEMP/deb-extracted"
+          dpkg-deb --extract "$deb" "$extracted"
+          desktop-file-validate "$extracted/usr/share/applications/domino.desktop"
+          test -x "$extracted/usr/games/domino"
+          timeout 60 "$extracted/usr/games/domino" --headless --quit-after 2 > "$RUNNER_TEMP/launch.log" 2>&1
+          cat "$RUNNER_TEMP/launch.log"
+          if grep -Eq '\b(SCRIPT )?ERROR\b' "$RUNNER_TEMP/launch.log"; then
+            exit 1
+          fi
+          cd builds
+          sha256sum "domino-$VERSION.apk" "domino_${VERSION}_amd64.deb" > SHA256SUMS
+          sha256sum --check SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        id: upload
+        with:
+          name: installers-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            builds/*.apk
+            builds/*.deb
+            builds/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.build.outputs.installer-artifact }}
+          merge-multiple: true
+          path: builds
+      - name: Verificar integridad y publicar preview completa
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          COMMIT: ${{ github.sha }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          (cd builds && sha256sum --check SHA256SUMS)
+          python3 scripts/release_plan.py --event "$EVENT" --ref "$REF" --run-number "$RUN_NUMBER" > "$RUNNER_TEMP/plan.json"
+          version=$(python3 -c 'import json,sys; plan=json.load(open(sys.argv[1])); assert plan["publish"]; print(plan["version"])' "$RUNNER_TEMP/plan.json")
+          python3 scripts/publish.py --version "$version" --commit "$COMMIT" --artifacts builds --repo "$REPOSITORY"

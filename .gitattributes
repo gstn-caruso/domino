@@ -1,0 +1,11 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.webp binary
+*.ogg binary
+*.wav binary
+*.apk binary
+*.deb binary
+*.zip binary
+*.tpz binary
+*.translation binary
