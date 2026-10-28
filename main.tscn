@@ -1,0 +1,78 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://main.gd" id="1_language"]
+
+[node name="Menu" type="Control"]
+script = ExtResource("1_language")
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.075, 0.12, 0.115, 1)
+
+[node name="Margins" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Content" type="VBoxContainer" parent="Margins"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="Title" type="Label" parent="Margins/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 40
+text = "MENU_TITLE"
+horizontal_alignment = 1
+
+[node name="Play" type="Button" parent="Margins/Content"]
+custom_minimum_size = Vector2(220, 56)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_colors/font_disabled_color = Color(0.72, 0.78, 0.75, 1)
+theme_override_font_sizes/font_size = 24
+disabled = true
+text = "MENU_PLAY"
+
+[node name="Status" type="Label" parent="Margins/Content"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "MENU_STATUS"
+horizontal_alignment = 1
+
+[node name="Languages" type="HBoxContainer" parent="Margins/Content"]
+layout_mode = 2
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="Spanish" type="Button" parent="Margins/Content/Languages"]
+custom_minimum_size = Vector2(112, 48)
+layout_mode = 2
+text = "Español"
+
+[node name="English" type="Button" parent="Margins/Content/Languages"]
+custom_minimum_size = Vector2(112, 48)
+layout_mode = 2
+text = "English"
+
+[connection signal="pressed" from="Margins/Content/Languages/Spanish" to="." method="_select_language" binds= ["es"]]
+[connection signal="pressed" from="Margins/Content/Languages/English" to="." method="_select_language" binds= ["en"]]

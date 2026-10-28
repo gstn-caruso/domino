@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Domino
+Name[es]=Dominó
+Exec=/usr/games/domino
+Icon=domino
+Terminal=false
+Categories=Game;BoardGame;
