@@ -1,0 +1,36 @@
+name: Godot 4.7.2 oficial
+description: Descarga el motor y opcionalmente las plantillas con SHA256 fijados.
+inputs:
+  templates:
+    description: Instalar las plantillas necesarias para Android y Linux.
+    required: false
+    default: 'false'
+runs:
+  using: composite
+  steps:
+    - name: Motor oficial verificado
+      shell: bash
+      run: |
+        set -euo pipefail
+        tools="$RUNNER_TEMP/domino-tools"
+        mkdir -p "$tools"
+        curl --fail --location --retry 3 --output "$tools/editor.zip" \
+          https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
+        echo "cadd3204e728a35d3f13adb7fd0d7902636b79f6b95c40c265eb73b6c35329e4  $tools/editor.zip" | sha256sum --check --strict
+        unzip -q "$tools/editor.zip" -d "$tools/editor"
+        chmod +x "$tools/editor/Godot_v4.7.2-stable_linux.x86_64"
+        echo "GODOT_BIN=$tools/editor/Godot_v4.7.2-stable_linux.x86_64" >> "$GITHUB_ENV"
+    - name: Plantillas oficiales verificadas
+      if: inputs.templates == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        archive="$RUNNER_TEMP/domino-tools/templates.tpz"
+        destination="$HOME/.local/share/godot/export_templates/4.7.2.stable"
+        curl --fail --location --retry 3 --output "$archive" \
+          https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_export_templates.tpz
+        echo "f298490b8d44d934be425a5a65a51bf15f422428b229a06a6e11d9ffea248011  $archive" | sha256sum --check --strict
+        mkdir -p "$destination"
+        unzip -q -j "$archive" templates/linux_release.x86_64 templates/android_debug.apk \
+          templates/android_release.apk templates/version.txt -d "$destination"
+        chmod +x "$destination/linux_release.x86_64"
