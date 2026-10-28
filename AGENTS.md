@@ -1,8 +1,10 @@
 # Dominó
 
 - Objetivo: dominó calmo, sin anuncios ni sobresaltos. Godot 4.7.2/GDScript;
-  Android teléfonos/tablets y Linux; textos ES/EN. React Native descartado.
-- Estado: solo menú bilingüe; Jugar deshabilitado. No atribuir partida, CPU o audio.
+  Android teléfonos/tablets y Linux; solo castellano con i18n preparada.
+  Inglés futuro no habilitado. React Native descartado.
+- Estado: solo menú en castellano, sin selector; Jugar deshabilitado.
+  No atribuir partida, CPU o audio.
 - Mantener textos en `translations/menu.csv`. Conservar `*.uid` y `*.import`;
   no versionar `.godot`, traducciones generadas, instaladores ni secretos.
 - Cambios de comportamiento: TDD, un caso observable a la vez; separar estructura.

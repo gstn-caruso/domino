@@ -1,5 +1,5 @@
 extends Control
 
 
-func _select_language(locale: String) -> void:
-	TranslationServer.set_locale(locale)
+func _enter_tree() -> void:
+	TranslationServer.set_locale("es")
