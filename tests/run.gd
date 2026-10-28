@@ -1,7 +1,7 @@
 extends SceneTree
 
 const CASE_NAME = "givenIdiomaEs_whenAbrirProyecto_thenMenuVisibleEnEspanol"
-const LANGUAGE_CASE_NAME = "givenMenuEs_whenElegirEn_thenTextoVisibleEnIngles"
+const LANGUAGE_CASE_NAME = "givenSistemaEn_whenAbrirMenu_thenCastellanoSinSelector"
 
 var active_case := CASE_NAME
 
@@ -22,7 +22,7 @@ func _run() -> void:
 	print("PASS: " + CASE_NAME)
 
 	active_case = LANGUAGE_CASE_NAME
-	if not await givenMenuEs_whenElegirEn_thenTextoVisibleEnIngles():
+	if not await givenSistemaEn_whenAbrirMenu_thenCastellanoSinSelector():
 		quit(1)
 		return
 	print("PASS: " + LANGUAGE_CASE_NAME)
@@ -47,8 +47,8 @@ func givenIdiomaEs_whenAbrirProyecto_thenMenuVisibleEnEspanol() -> bool:
 	return true
 
 
-func givenMenuEs_whenElegirEn_thenTextoVisibleEnIngles() -> bool:
-	TranslationServer.set_locale("es")
+func givenSistemaEn_whenAbrirMenu_thenCastellanoSinSelector() -> bool:
+	TranslationServer.set_locale("en")
 	if current_scene != null:
 		current_scene.free()
 	var scene_path: String = ProjectSettings.get_setting("application/run/main_scene")
@@ -57,35 +57,27 @@ func givenMenuEs_whenElegirEn_thenTextoVisibleEnIngles() -> bool:
 	current_scene = menu
 	await process_frame
 
-	var english_button: Button = null
+	var play_text := ""
+	var play_disabled := false
+	var status_text := ""
+	var language_selector_visible := false
 	for button in menu.find_children("*", "Button", true, false):
-		if button.is_visible_in_tree() and button.atr(button.text) == "English":
-			english_button = button
-			break
-	if english_button == null:
-		return _fail("Falta un botón visible English para elegir el idioma desde el menú.")
-	if english_button.disabled or english_button.focus_mode == Control.FOCUS_NONE:
-		return _fail("El botón English debe estar habilitado y ser accesible por teclado.")
-
-	english_button.grab_focus()
-	var enter := InputEventKey.new()
-	enter.keycode = KEY_ENTER
-	enter.pressed = true
-	root.push_input(enter)
-	enter.pressed = false
-	root.push_input(enter)
-	await process_frame
-
-	var play_visible := false
-	for button in menu.find_children("*", "Button", true, false):
-		if button.is_visible_in_tree() and button.atr(button.text) == "Play":
-			play_visible = true
-	var status_visible := false
+		if not button.is_visible_in_tree():
+			continue
+		if button.text == "MENU_PLAY":
+			play_text = button.atr(button.text)
+			play_disabled = button.disabled
+		if button.atr(button.text) in ["Español", "English"]:
+			language_selector_visible = true
+	for selector in menu.find_children("*", "OptionButton", true, false):
+		if selector.is_visible_in_tree():
+			language_selector_visible = true
 	for label in menu.find_children("*", "Label", true, false):
-		if label.is_visible_in_tree() and label.atr(label.text) == "In preparation":
-			status_visible = true
-	if not play_visible or not status_visible:
-		return _fail("Tras elegir English deben verse Play e In preparation en el menú.")
+		if label.is_visible_in_tree() and label.text == "MENU_STATUS":
+			status_text = label.atr(label.text)
+
+	if play_text != "Jugar" or not play_disabled or status_text != "En preparación" or language_selector_visible:
+		return _fail("Con sistema en inglés se espera Jugar deshabilitado y En preparación traducidos desde sus claves, sin selector. Observado: %s / %s; deshabilitado: %s; selector visible: %s." % [play_text, status_text, play_disabled, language_selector_visible])
 	return true
 
 

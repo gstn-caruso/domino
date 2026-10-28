@@ -15,7 +15,7 @@ window/stretch/mode="canvas_items"
 [internationalization]
 
 locale/fallback="es"
-locale/translations=PackedStringArray("res://translations/menu.es.translation", "res://translations/menu.en.translation")
+locale/translations=PackedStringArray("res://translations/menu.es.translation")
 
 [rendering]
 

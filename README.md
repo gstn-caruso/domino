@@ -4,8 +4,8 @@ Un dominó calmo, sin anuncios, complejidad innecesaria ni sobresaltos, para
 Android (teléfonos y tablets) y Linux. Proyecto en **Godot 4.7.2 / GDScript**;
 React Native quedó descartado. [Repositorio público](https://github.com/gstn-caruso/domino).
 
-**Estado actual: preview del menú bilingüe español/inglés.** «Jugar / Play» está
-deshabilitado y muestra «En preparación / In preparation». Todavía no hay partida,
+**Estado actual: preview del menú solo en castellano, sin selector de idioma.**
+«Jugar» está deshabilitado y muestra «En preparación». Todavía no hay partida,
 sonidos ni CPU. No se promete una experiencia de juego terminada.
 
 ## Desarrollo en Linux
@@ -98,9 +98,11 @@ Un nuevo push a main obtiene otra versión; conservar la evidencia del fallo ant
 
 ## Idiomas y próximos pasos
 
-Los textos están en `translations/menu.csv` con claves ES/EN. Godot importa el CSV
-y genera `*.translation`; se conservan `*.uid` y metadatos `*.import`, no `.godot/`.
-El selector del menú cambia el idioma visible; no se afirma persistencia todavía.
+Los textos están en `translations/menu.csv` con claves `MENU_` y solo catálogo ES.
+Godot importa el CSV y genera `*.translation`; se conservan `*.uid` y metadatos
+`*.import`, no `.godot/`. El menú abre siempre en castellano, también con el sistema
+en otro idioma, y no tiene selector. La internacionalización queda preparada para
+un futuro inglés, todavía no habilitado; no hay persistencia de idioma.
 
 Roadmap breve: reglas de dominó doble-seis con pozo; CPU difícil con fuerza medible,
 sin acceso a fichas ocultas, cuando se pida; audio suave opcional, apagado por
